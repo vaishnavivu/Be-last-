@@ -1,0 +1,101 @@
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <omp.h>
+
+using namespace std;
+
+// Sequential bubble sort
+void bubbleSortSequential(int arr[], int n) {
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}
+
+// Parallel bubble sort
+void bubbleSortParallel(int arr[], int n) {
+    #pragma omp parallel
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            #pragma omp for
+            for (int j = 0; j < n - i - 1; ++j) {
+                if (arr[j] > arr[j + 1]) {
+                    swap(arr[j], arr[j + 1]);
+                }
+            }
+        }
+    }
+}
+
+// Function to check if array is sorted
+bool isSorted(int arr[], int n) {
+    for (int i = 0; i < n - 1; ++i) {
+        if (arr[i] > arr[i + 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Function to print array
+void printArray(int arr[], int n) {
+    for (int i = 0; i < n; ++i) {
+        cout << arr[i] << " ";
+    }
+    cout << endl;
+}
+
+int main() {
+    const int size = 10000;
+    int arr[size];
+
+    // Initialize array with random values
+    srand(time(nullptr));
+    for (int i = 0; i < size; ++i) {
+        arr[i] = rand() % 10000;
+    }
+
+    // Measure performance of sequential bubble sort
+    clock_t startSeq = clock();
+    bubbleSortSequential(arr, size);
+    clock_t endSeq = clock();
+    double timeSequential = double(endSeq - startSeq) / CLOCKS_PER_SEC;
+
+    if (!isSorted(arr, size)) {
+        cout << "Sequential bubble sort failed!" << endl;
+        return 1;
+    }
+
+    cout << "Sequential bubble sort took " << timeSequential << " seconds." << endl;
+
+    // Reset array for parallel bubble sort
+    for (int i = 0; i < size; ++i) {
+        arr[i] = rand() % 10000;
+    }
+
+    // Measure performance of parallel bubble sort
+    clock_t startPar = clock();
+    bubbleSortParallel(arr, size);
+    clock_t endPar = clock();
+    double timeParallel = double(endPar - startPar) / CLOCKS_PER_SEC;
+
+    if (!isSorted(arr, size)) {
+        cout << "Parallel bubble sort failed!" << endl;
+        return 1;
+    }
+
+    cout << "Parallel bubble sort took " << timeParallel << " seconds." << endl;
+
+    return 0;
+}
+
+
+
+
+
+g++ -std=c++11 -fopenmp parallel_bubble_sort.cpp -o parallel_bubble_sort
+

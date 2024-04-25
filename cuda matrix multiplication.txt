@@ -1,0 +1,66 @@
+#include <iostream>
+
+// CUDA kernel for matrix multiplication
+__global__ void matrixMul(float *a, float *b, float *c, int width) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < width && col < width) {
+        float sum = 0.0;
+        for (int k = 0; k < width; ++k) {
+            sum += a[row * width + k] * b[k * width + col];
+        }
+        c[row * width + col] = sum;
+    }
+}
+
+int main() {
+    const int width = 1024; // Matrix width
+    const dim3 blockSize(32, 32);
+    const dim3 numBlocks((width + blockSize.x - 1) / blockSize.x, (width + blockSize.y - 1) / blockSize.y);
+
+    // Allocate memory on host
+    float *h_a = new float[width * width];
+    float *h_b = new float[width * width];
+    float *h_c = new float[width * width];
+
+    // Initialize matrices on host
+    for (int i = 0; i < width * width; ++i) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+
+    // Allocate memory on device
+    float *d_a, *d_b, *d_c;
+    cudaMalloc(&d_a, width * width * sizeof(float));
+    cudaMalloc(&d_b, width * width * sizeof(float));
+    cudaMalloc(&d_c, width * width * sizeof(float));
+
+    // Copy matrices from host to device
+    cudaMemcpy(d_a, h_a, width * width * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, width * width * sizeof(float), cudaMemcpyHostToDevice);
+
+    // Launch kernel
+    matrixMul<<<numBlocks, blockSize>>>(d_a, d_b, d_c, width);
+
+    // Copy result from device to host
+    cudaMemcpy(h_c, d_c, width * width * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Free device memory
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+
+    // Output the first few elements of the result matrix
+    for (int i = 0; i < 10; ++i) {
+        std::cout << h_c[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Free host memory
+    delete[] h_a;
+    delete[] h_b;
+    delete[] h_c;
+
+    return 0;
+}

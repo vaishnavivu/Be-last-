@@ -1,0 +1,60 @@
+#include <iostream>
+
+// CUDA kernel to add two vectors
+__global__ void vectorAdd(float *a, float *b, float *c, int n) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (index < n) {
+        c[index] = a[index] + b[index];
+    }
+}
+
+int main() {
+    const int n = 1000000; // Size of the vectors
+    const int blockSize = 256;
+    const int numBlocks = (n + blockSize - 1) / blockSize; // Ensure all elements are covered
+
+    // Allocate memory on host
+    float *h_a = new float[n];
+    float *h_b = new float[n];
+    float *h_c = new float[n];
+
+    // Initialize vectors on host
+    for (int i = 0; i < n; ++i) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+
+    // Allocate memory on device
+    float *d_a, *d_b, *d_c;
+    cudaMalloc(&d_a, n * sizeof(float));
+    cudaMalloc(&d_b, n * sizeof(float));
+    cudaMalloc(&d_c, n * sizeof(float));
+
+    // Copy vectors from host to device
+    cudaMemcpy(d_a, h_a, n * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, n * sizeof(float), cudaMemcpyHostToDevice);
+
+    // Launch kernel
+    vectorAdd<<<numBlocks, blockSize>>>(d_a, d_b, d_c, n);
+
+    // Copy result from device to host
+    cudaMemcpy(h_c, d_c, n * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Free device memory
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+
+    // Output the first few elements of the result
+    for (int i = 0; i < 10; ++i) {
+        std::cout << h_c[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Free host memory
+    delete[] h_a;
+    delete[] h_b;
+    delete[] h_c;
+
+    return 0;
+}
